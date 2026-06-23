@@ -8,3 +8,4 @@ Do not copy this workflow into anything you care about.
 trigger artifact run 1782149308
 final screenshot run 1782149661
 terminal screenshot run 1782150894
+final screenshots 1782182269
