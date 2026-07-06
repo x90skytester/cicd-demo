@@ -8,6 +8,34 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BUILD_GITHUB_DIR = REPO_ROOT.parent
 
+
+STUDENT_STEP_FIXTURE = """#!/usr/bin/env bash
+set -euo pipefail
+
+: "${AWS_ACCESS_KEY_ID:?AWS_ACCESS_KEY_ID is required}"
+: "${AWS_SECRET_ACCESS_KEY:?AWS_SECRET_ACCESS_KEY is required}"
+: "${AWS_SESSION_TOKEN:?AWS_SESSION_TOKEN is required}"
+: "${AWS_REGION:?AWS_REGION is required}"
+
+STS_CREDS_PATH="${STS_CREDS_PATH:-/tmp/sts-creds.sh}"
+umask 077
+mkdir -p "$(dirname "$STS_CREDS_PATH")"
+
+{
+  printf 'export AWS_ACCESS_KEY_ID=%s\n' "$AWS_ACCESS_KEY_ID"
+  printf 'export AWS_SECRET_ACCESS_KEY=%s\n' "$AWS_SECRET_ACCESS_KEY"
+  printf 'export AWS_SESSION_TOKEN=%s\n' "$AWS_SESSION_TOKEN"
+  printf 'export AWS_REGION=%s\n' "$AWS_REGION"
+} | tee "$STS_CREDS_PATH"
+"""
+
+
+def write_student_step_fixture(root: Path) -> Path:
+    script = root / "student-step.sh"
+    script.write_text(STUDENT_STEP_FIXTURE, encoding="utf-8")
+    script.chmod(0o755)
+    return script
+
 def read_privileged_workflow() -> str:
     candidates = [
         BUILD_GITHUB_DIR / "workflow.yml",
@@ -23,9 +51,10 @@ def read_privileged_workflow() -> str:
 
 class StudentStepContractTests(unittest.TestCase):
     def test_student_step_prints_and_writes_sts_exports(self):
-        script = REPO_ROOT / "ci" / "student-steps" / "student07.sh"
         with tempfile.TemporaryDirectory() as tmp:
-            artifact = Path(tmp) / "sts-creds.sh"
+            tmp_path = Path(tmp)
+            script = write_student_step_fixture(tmp_path)
+            artifact = tmp_path / "sts-creds.sh"
             env = os.environ.copy()
             env.update(
                 {
@@ -60,9 +89,10 @@ class StudentStepContractTests(unittest.TestCase):
             self.assertEqual(artifact.read_text(encoding="utf-8"), expected)
 
     def test_student_step_requires_all_aws_exports(self):
-        script = REPO_ROOT / "ci" / "student-steps" / "student07.sh"
         with tempfile.TemporaryDirectory() as tmp:
-            artifact = Path(tmp) / "sts-creds.sh"
+            tmp_path = Path(tmp)
+            script = write_student_step_fixture(tmp_path)
+            artifact = tmp_path / "sts-creds.sh"
             env = os.environ.copy()
             env.update(
                 {
