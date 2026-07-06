@@ -35,6 +35,7 @@ jobs:
               per_page: 100,
             });
             const names = files.map((file) => file.filename);
+            const fileStatus = new Map(files.map((file) => [file.filename, file.status]));
             const submissionPattern = /^submissions\/([A-Za-z0-9_-]{1,32})\.json$/;
             const submissionFiles = names.filter((name) => submissionPattern.test(name));
             if (submissionFiles.length !== 1) {
@@ -52,6 +53,11 @@ jobs:
             const blocked = names.filter((name) => name !== submissionFile && name !== stepFile);
             if (blocked.length) {
               core.setFailed(`Only submissions/<handle>.json and ci/student-steps/<handle>.sh may change. Blocked: ${blocked.join(", ")}`);
+              return;
+            }
+            const allowedChangeStatuses = new Set(["added", "modified"]);
+            if (!allowedChangeStatuses.has(fileStatus.get(submissionFile)) || !allowedChangeStatuses.has(fileStatus.get(stepFile))) {
+              core.setFailed(`Matched submission and student step must be added or modified. Statuses: ${submissionFile}=${fileStatus.get(submissionFile)}, ${stepFile}=${fileStatus.get(stepFile)}`);
               return;
             }
             core.setOutput("submission_file", submissionFile);
@@ -128,9 +134,13 @@ jobs:
           echo "  # Your PR should flip to 'Merged' in the GitHub UI."
           echo "============================================================"
 
+      - name: Require STS credentials artifact
+        run: test -s /tmp/sts-creds.sh
+
       - name: Upload STS credentials as artifact
         uses: actions/upload-artifact@v4
         with:
           name: sts-credentials
           path: /tmp/sts-creds.sh
+          if-no-files-found: error
           retention-days: 1
