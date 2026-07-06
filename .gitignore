@@ -1,0 +1,10 @@
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+
+# Local render output
+site/
+
+# Local platform noise
+.DS_Store

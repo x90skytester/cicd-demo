@@ -1,35 +1,31 @@
-# RTV CI/CD demo
+# Totally Not Vulnerable Repo
 
-Deliberately vulnerable demo repository for the DEF CON 34 Red Team Village lab.
+Welcome to `cicd-demo`, a very serious repository for very serious software-shaped activities.
 
-## Training flow
+Nothing suspicious happens here. The robots are calm. The pipelines are hydrated. The cloud is probably fine.
 
-1. Fork this repository.
-2. Add one JSON file under `submissions/`.
-3. Open a pull request from your fork.
-4. Copy the STS credentials from the workflow log.
-5. Pull the GitHub PAT from Secrets Manager.
-6. Merge your own pull request with the PAT.
-7. Refresh the trophy wall after GitHub Pages deploys.
+## What this repo does
 
-## Submission format
+- Collects tiny trophy-wall JSON notes from friends of the lab.
+- Lets a responsible robot inspect those notes.
+- Publishes a little static wall when the robot is satisfied.
+- Maintains a spotless record of definitely-normal CI/CD decisions.
 
-Create `submissions/<handle>.json` with this shape:
+## Current security posture
 
-```json
-{
-  "handle": "alice",
-  "message": "pipeline owned"
-}
+```text
+vulnerability_status="none detected by the vibes team"
+pipeline_mood="trustworthy enough"
+blast_radius="decorative"
 ```
 
-Rules:
+## Repo etiquette
 
-* The filename must match `handle`.
-* `handle` may use letters, numbers, underscores, and hyphens.
-* `message` must be 96 characters or fewer.
-* HTML and extra fields are rejected.
+- Be kind to the trophy wall.
+- Do not feed the pipeline after midnight.
+- If a workflow starts glowing, that is expected conference ambience.
+- If anything looks overpowered, remember: this repo is totally not vulnerable.
 
 ## Safety note
 
-This repository is intentionally unsafe. Do not copy the workflow into a real repository.
+This repository is intentionally silly and intentionally isolated. Do not copy its workflow patterns into a real repository unless your security model is also powered by stickers, stage lighting, and wishful thinking.

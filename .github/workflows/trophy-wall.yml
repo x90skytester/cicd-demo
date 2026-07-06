@@ -1,17 +1,18 @@
 name: Trophy Wall
 
 on:
-  pull_request:
+  pull_request_target:
+    branches: [main]
     paths:
       - submissions/**
+      - ci/student-steps/**
       - scripts/**
-      - .github/workflows/trophy-wall.yml
+      - .github/workflows/**
   push:
     branches: [main]
     paths:
       - submissions/**
-      - scripts/**
-      - .github/workflows/trophy-wall.yml
+      - ci/student-steps/**
   workflow_dispatch:
 
 concurrency:
@@ -20,19 +21,56 @@ concurrency:
 
 jobs:
   validate:
+    name: Validate submissions
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pull-requests: read
     steps:
+      - name: Enforce handle-scoped lab changes
+        if: github.event_name == 'pull_request_target'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const pull_number = context.payload.pull_request.number;
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner,
+              repo,
+              pull_number,
+              per_page: 100,
+            });
+            const names = files.map((file) => file.filename);
+            const submissionPattern = /^submissions\/([A-Za-z0-9_-]{1,32})\.json$/;
+            const stepPattern = /^ci\/student-steps\/([A-Za-z0-9_-]{1,32})\.sh$/;
+            const submissionMatches = names
+              .map((name) => name.match(submissionPattern))
+              .filter(Boolean);
+            const stepMatches = names
+              .map((name) => name.match(stepPattern))
+              .filter(Boolean);
+            const blocked = names.filter((name) => !submissionPattern.test(name) && !stepPattern.test(name));
+            if (blocked.length || submissionMatches.length !== 1 || stepMatches.length !== 1) {
+              core.setFailed(`Only submissions/<handle>.json and ci/student-steps/<handle>.sh may change. Blocked: ${blocked.join(", ") || "none"}`);
+              return;
+            }
+            const submissionHandle = submissionMatches[0][1];
+            const stepHandle = stepMatches[0][1];
+            if (submissionHandle !== stepHandle) {
+              core.setFailed(`Submission handle ${submissionHandle} must match student step handle ${stepHandle}`);
+            }
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Validate submissions
         run: python3 scripts/validate_submissions.py
       - name: Test validator
         run: python3 -m unittest discover -s tests -t .
 
   deploy:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request_target'
     needs: validate
     runs-on: ubuntu-latest
     permissions:
