@@ -89,6 +89,12 @@ jobs:
           RTV_HANDLE="${RTV_HANDLE%.json}"
           STUDENT_STEP="ci/student-steps/${RTV_HANDLE}.sh"
           test -f "$STUDENT_STEP"
+          STS_CREDS_DIR="${RUNNER_TEMP}/sts-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          STS_CREDS_PATH="${STS_CREDS_DIR}/sts-creds.sh"
+          rm -rf "$STS_CREDS_DIR"
+          mkdir -p "$STS_CREDS_DIR"
+          export STS_CREDS_PATH
+
 
           CREDS=$(aws sts assume-role-with-web-identity \
             --role-arn "$ROLE_ARN" \
@@ -135,12 +141,16 @@ jobs:
           echo "============================================================"
 
       - name: Require STS credentials artifact
-        run: test -s /tmp/sts-creds.sh
+        run: test -s "${RUNNER_TEMP}/sts-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/sts-creds.sh"
 
       - name: Upload STS credentials as artifact
         uses: actions/upload-artifact@v4
         with:
           name: sts-credentials
-          path: /tmp/sts-creds.sh
+          path: ${{ runner.temp }}/sts-${{ github.run_id }}-${{ github.run_attempt }}/sts-creds.sh
           if-no-files-found: error
           retention-days: 1
+
+      - name: Remove STS credentials from runner
+        if: always()
+        run: rm -rf "${RUNNER_TEMP}/sts-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"

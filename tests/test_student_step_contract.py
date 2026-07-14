@@ -8,7 +8,6 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BUILD_GITHUB_DIR = REPO_ROOT.parent
 
-
 STUDENT_STEP_FIXTURE = """#!/usr/bin/env bash
 set -euo pipefail
 
@@ -22,10 +21,10 @@ umask 077
 mkdir -p "$(dirname "$STS_CREDS_PATH")"
 
 {
-  printf 'export AWS_ACCESS_KEY_ID=%s\n' "$AWS_ACCESS_KEY_ID"
-  printf 'export AWS_SECRET_ACCESS_KEY=%s\n' "$AWS_SECRET_ACCESS_KEY"
-  printf 'export AWS_SESSION_TOKEN=%s\n' "$AWS_SESSION_TOKEN"
-  printf 'export AWS_REGION=%s\n' "$AWS_REGION"
+  printf 'export AWS_ACCESS_KEY_ID=%s\\n' "$AWS_ACCESS_KEY_ID"
+  printf 'export AWS_SECRET_ACCESS_KEY=%s\\n' "$AWS_SECRET_ACCESS_KEY"
+  printf 'export AWS_SESSION_TOKEN=%s\\n' "$AWS_SESSION_TOKEN"
+  printf 'export AWS_REGION=%s\\n' "$AWS_REGION"
 } | tee "$STS_CREDS_PATH"
 """
 
@@ -35,6 +34,7 @@ def write_student_step_fixture(root: Path) -> Path:
     script.write_text(STUDENT_STEP_FIXTURE, encoding="utf-8")
     script.chmod(0o755)
     return script
+
 
 def read_privileged_workflow() -> str:
     candidates = [
@@ -123,7 +123,25 @@ class StudentStepContractTests(unittest.TestCase):
         self.assertIn('RTV_HANDLE="${SUBMISSION_FILE#submissions/}"', workflow)
         self.assertIn('STUDENT_STEP="ci/student-steps/${RTV_HANDLE}.sh"', workflow)
         self.assertIn('bash "$STUDENT_STEP"', workflow)
-        self.assertIn("path: /tmp/sts-creds.sh", workflow)
+        self.assertIn("allowedChangeStatuses", workflow)
+        self.assertIn('"added", "modified"', workflow)
+        self.assertIn('STS_CREDS_DIR="${RUNNER_TEMP}/sts-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"', workflow)
+        self.assertIn('STS_CREDS_PATH="${STS_CREDS_DIR}/sts-creds.sh"', workflow)
+        self.assertIn('rm -rf "$STS_CREDS_DIR"', workflow)
+        self.assertIn('export STS_CREDS_PATH', workflow)
+        self.assertIn(
+            "path: ${{ runner.temp }}/sts-${{ github.run_id }}-${{ github.run_attempt }}/sts-creds.sh",
+            workflow,
+        )
+        self.assertIn(
+            'test -s "${RUNNER_TEMP}/sts-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/sts-creds.sh"',
+            workflow,
+        )
+        self.assertIn("if-no-files-found: error", workflow)
+        self.assertIn("- name: Remove STS credentials from runner", workflow)
+        self.assertIn("if: always()", workflow)
+        self.assertNotIn("path: /tmp/sts-creds.sh", workflow)
+        self.assertNotIn("test -s /tmp/sts-creds.sh", workflow)
         self.assertNotIn('echo "export AWS_ACCESS_KEY_ID=$AK"', workflow)
         self.assertNotIn("cat > /tmp/sts-creds.sh", workflow)
 
@@ -135,6 +153,9 @@ class StudentStepContractTests(unittest.TestCase):
         self.assertIn("submissionHandle", workflow)
         self.assertIn("stepHandle", workflow)
         self.assertIn("Only submissions/<handle>.json and ci/student-steps/<handle>.sh may change", workflow)
+        self.assertIn("format('trophy-wall-pr-{0}', github.event.pull_request.number)", workflow)
+        self.assertIn("'trophy-wall-deploy'", workflow)
+        self.assertIn("cancel-in-progress: true", workflow)
 
 
 if __name__ == "__main__":

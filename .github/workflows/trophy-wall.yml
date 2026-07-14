@@ -16,7 +16,8 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: trophy-wall
+  group: >-
+    ${{ github.event_name == 'pull_request_target' && format('trophy-wall-pr-{0}', github.event.pull_request.number) || 'trophy-wall-deploy' }}
   cancel-in-progress: true
 
 jobs:
